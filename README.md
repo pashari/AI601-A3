@@ -1,6 +1,6 @@
 
 
-# Assignment 3 - Real-Time Data Streaming with Kafka, PySpark, Prometheus & Grafana
+#  Real-Time Data Streaming with Kafka, PySpark, Prometheus & Grafana
 
 This project sets up a data streaming pipeline using Kafka, PySpark, Prometheus, and Grafana. All necessary components run in Docker containers. Two Python scripts (`producer.py` and `streamer.py`) handle real-time data flow, monitored through Grafana.
 

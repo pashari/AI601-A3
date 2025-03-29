@@ -1,20 +1,16 @@
-# Revised streamer.py (Approach B: Simplified Prometheus metrics)
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, from_json, to_timestamp, window, sum as spark_sum, avg as spark_avg, max as spark_max, min as spark_min
 from pyspark.sql.types import StructType, StringType, IntegerType, FloatType
 from prometheus_client import start_http_server, Gauge
 import time
 
-# --------------------------
-# 1. Start Prometheus HTTP Server
-# --------------------------
-# This starts a simple HTTP endpoint on port 8000 that Prometheus will scrape.
+
+# 1. Start Prometheus HTTP Serve
 start_http_server(8000)
 print("Prometheus metrics HTTP server started on port 8000")
 
-# --------------------------
+
 # 2. Define Prometheus Gauges (Using only sensor_id as label)
-# --------------------------
 traffic_total_vehicle_count = Gauge(
     "total_vehicle_count",
     "Total Vehicle Count per sensor aggregated over a 5-minute window",
@@ -45,18 +41,15 @@ busiest_sensor_gauge = Gauge(
     ["sensor_id"]
 )
 
-# --------------------------
 # 3. Create SparkSession with Kafka Support
-# --------------------------
 spark = SparkSession.builder \
     .appName("KafkaStreamToPrometheus_Simplified") \
     .master("local[*]") \
     .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2") \
     .getOrCreate()
 
-# --------------------------
+
 # 4. Define Schema and Read from Kafka
-# --------------------------
 schema = StructType() \
     .add("sensor_id", StringType()) \
     .add("timestamp", StringType()) \
@@ -85,10 +78,7 @@ traffic_df = raw_stream.selectExpr("CAST(value AS STRING) as json_str") \
 traffic_df = traffic_df.withColumn("event_time", to_timestamp(col("timestamp"), "yyyy-MM-dd'T'HH:mm:ss"))
 traffic_df = traffic_df.withWatermark("event_time", "10 minutes")
 
-# --------------------------
 # 5. Define Windowed Aggregations
-# --------------------------
-
 # (A) Traffic Volume Over Time (5-minute window)
 traffic_volume_df = traffic_df.groupBy(
     window(col("event_time"), "5 minutes"),
@@ -130,9 +120,8 @@ busiest_df = traffic_df.groupBy(
     spark_sum("vehicle_count").alias("total_count")
 )
 
-# --------------------------
+
 # 6. Define Update Functions for Prometheus (Group by sensor_id only)
-# --------------------------
 # For each update function, we select the most recent window (i.e. with the maximum window.end)
 # from the batch for each sensor and update the corresponding gauge.
 
@@ -182,9 +171,7 @@ def update_speed_drop(batch_df, batch_id):
 def update_busiest_sensor(batch_df, batch_id):
     update_by_sensor(batch_df, "total_count", busiest_sensor_gauge, "Busiest")
 
-# --------------------------
 # 7. Start Streaming Queries (Each aggregation runs as a separate query)
-# --------------------------
 query_volume = traffic_volume_df.writeStream \
     .foreachBatch(update_total_vehicle_count) \
     .outputMode("update") \
@@ -215,7 +202,5 @@ query_busiest = busiest_df.writeStream \
     .option("checkpointLocation", "/tmp/checkpoint_busiest") \
     .start()
 
-# --------------------------
 # 8. Await Termination (All queries run concurrently)
-# --------------------------
 query_volume.awaitTermination()

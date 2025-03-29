@@ -19,7 +19,7 @@ This project sets up a data streaming pipeline using Kafka, PySpark, Prometheus,
 ## Architecture Diagram
 
 
-![Architecture Diagram](./architecture-diagram/Architecture-Diagram-Assignment3.png)
+![Architecture Diagram](Architecture-Diagram/Architecture-Diagram-Assignment3.png)
 
 
 ## 🚀 Getting Started
